@@ -19,6 +19,7 @@ class TextController {
     
     public async getText (req:Request, res:Response){
         try{
+            if(mensaje==null) mensaje = "Mensaje por defecto";
             console.log('Petición GET realizada');
             res.status(200).json(mensaje);
         }
