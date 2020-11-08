@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/Irega97/CybersecurityServer#readme",
   "dependencies": {
+    "bigint-conversion": "^2.1.12",
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "crypto-js": "^4.0.0",

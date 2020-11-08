@@ -1,8 +1,7 @@
+//const bigintConversion = require('bigint-conversion')
 import { Request, Response } from 'express';
-import crypto from 'crypto';
 var CryptoJS = require("crypto-js")
 
-import server from '../index'
 
 /* const secret = 'bobito';
 const pswd = 'SCCBD';
@@ -11,7 +10,7 @@ const keyAndIv = crypto.pbkdf2Sync(secret, pswd, 1024, 32, 'sha1');
 const key = keyAndIv.slice(0, 16);
 const iv = keyAndIv.slice(16, 32); */
 
-const secretKey = CryptoJS.enc.Hex.parse("4b173f3b3c2366674695d1a17a04752a");
+var secretKey = CryptoJS.enc.Hex.parse("4b173f3b3c2366674695d1a17a04752a");
 
 var mensaje : string;
 
@@ -21,12 +20,11 @@ class TextController {
 
     public async postText (req:Request, res:Response){
         try{
-            console.log("BODY:"+req.body.text.cipherText);
-            console.log('Petición POST realizada! Mensaje cifrado:', req.body.text.cipherText);
-            let iv = req.body.text.iv;
-            let mensaje = req.body.text.cipherText;
+            let iv = req.body.iv;
+            let mensaje = req.body.cipherText;
+            console.log('Petición POST realizada! Mensaje cifrado:', mensaje);
             mensaje = decrypt(secretKey,iv,mensaje);
-            console.log("HOLI: " + mensaje);
+            console.log("Mensaje descifrado: " + mensaje);
             res.status(200).json({"text": mensaje});
         }
         catch{
@@ -43,8 +41,10 @@ class TextController {
             let data = {
                 dataCipher: datacipher,
                 iv: iv
-            }
+            };
             res.status(200).json(data);
+            console.log("GET SERVER:" + data.dataCipher);
+            console.log("GET IV SERVER:" + data.iv);
         }
         catch{
             res.status(500).json({"text": 'Internal Server Error'});
@@ -53,20 +53,30 @@ class TextController {
 }
 
 function encrypt(key:string,iv:Buffer,mensaje:string){
-    let cipher = crypto.createCipheriv('aes-128-cbc',key,iv);
+    /* let cipher = crypto.createCipheriv('aes-128-cbc',key,iv);
     let encrypted = cipher.update(mensaje,'utf8','hex');
     encrypted += cipher.final('hex');
     console.log('Mensaje cifrado:',encrypted);
+    return encrypted; */
+    let encrypted = CryptoJS.AES.encrypt(mensaje,key,{iv:iv}).toString(CryptoJS.enc.utf8)
     return encrypted;
 }
 
-function decrypt(key:Buffer,iv:Buffer,cipherdata:string){
-    let decipher = crypto.createDecipheriv('aes-128-cbc',key,iv);
-    let decrypted = decipher.update(cipherdata,'hex','utf8');
-    decrypted+=decipher.final('utf-8');
-    console.log('Mensaje descifrado:',decrypted);
-    return decrypted;
+function decrypt(key:Buffer,iv:Buffer,mensaje:string){
+    let decrypted = CryptoJS.AES.decrypt(mensaje,key, {iv:iv}).toString(CryptoJS.enc.utf8);
+    let msg = hex_to_ascii(decrypted);
+    return msg;
 }
+
+function hex_to_ascii(msg: string)
+ {
+	var hex  = msg.toString();
+	var str = '';
+	for (var n = 0; n < hex.length; n += 2) {
+		str += String.fromCharCode(parseInt(hex.substr(n, 2), 16));
+    }
+	return str;
+ }
 
 const controller: TextController = new TextController();
 export default controller;
