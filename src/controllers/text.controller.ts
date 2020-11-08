@@ -1,29 +1,18 @@
-//const bigintConversion = require('bigint-conversion')
 import { Request, Response } from 'express';
 var CryptoJS = require("crypto-js")
-
-
-/* const secret = 'bobito';
-const pswd = 'SCCBD';
-const algorithm = 'aes-128-cbc';
-const keyAndIv = crypto.pbkdf2Sync(secret, pswd, 1024, 32, 'sha1');
-const key = keyAndIv.slice(0, 16);
-const iv = keyAndIv.slice(16, 32); */
 
 var secretKey = CryptoJS.enc.Hex.parse("4b173f3b3c2366674695d1a17a04752a");
 
 var mensaje : string;
-
-console.log('key:', secretKey);
 
 class TextController {
 
     public async postText (req:Request, res:Response){
         try{
             let iv = req.body.iv;
-            let mensaje = req.body.cipherText;
-            console.log('Petición POST realizada! Mensaje cifrado:', mensaje);
-            mensaje = decrypt(secretKey,iv,mensaje);
+            let msg = req.body.cipherText;
+            console.log('Petición POST realizada! Mensaje cifrado:', msg);
+            mensaje = decrypt(secretKey,iv,msg);
             console.log("Mensaje descifrado: " + mensaje);
             res.status(200).json({"text": mensaje});
         }
@@ -34,7 +23,7 @@ class TextController {
     
     public async getText (req:Request, res:Response){
         try{
-            if(mensaje==null) mensaje = "Mensaje por defecto";
+            if(mensaje==null) mensaje = "Introduce tu nombre";
             console.log('Petición GET realizada');
             var iv = CryptoJS.lib.WordArray.random(128/8);
             let datacipher = encrypt(secretKey,iv,mensaje);
@@ -43,8 +32,8 @@ class TextController {
                 iv: iv
             };
             res.status(200).json(data);
-            console.log("GET SERVER:" + data.dataCipher);
-            console.log("GET IV SERVER:" + data.iv);
+            console.log("GET SERVER: " + data.dataCipher);
+            console.log("GET IV SERVER: " + data.iv);
         }
         catch{
             res.status(500).json({"text": 'Internal Server Error'});
@@ -53,11 +42,6 @@ class TextController {
 }
 
 function encrypt(key:string,iv:Buffer,mensaje:string){
-    /* let cipher = crypto.createCipheriv('aes-128-cbc',key,iv);
-    let encrypted = cipher.update(mensaje,'utf8','hex');
-    encrypted += cipher.final('hex');
-    console.log('Mensaje cifrado:',encrypted);
-    return encrypted; */
     let encrypted = CryptoJS.AES.encrypt(mensaje,key,{iv:iv}).toString(CryptoJS.enc.utf8)
     return encrypted;
 }
