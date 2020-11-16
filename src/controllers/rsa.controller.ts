@@ -1,6 +1,5 @@
 import {Request, Response } from 'express';
 //import * as crypto from 'crypto';
-let sha = require('object-sha');
 let myRsa = require('my_rsa');
 let rsa = require('../rsa');
 let crypto = new rsa();
@@ -11,10 +10,9 @@ let hexToBigint = bigint_conversion.hexToBigint;
 
 const hex = require('ascii-hex');
 
-
-const { publicKey, privateKey} = crypto.generateKeyPairSync("rsa", {
+/*const { publicKey, privateKey} = crypto.generateKeyPairSync("rsa", {
 	modulusLength: 2048,
-})
+})*/
 
 // This is the data we want to encrypt
 let mensaje: string;
@@ -93,7 +91,7 @@ class RsaController {
         return cipher;
     }*/
 
-    public decryptData(msg: string){ 
+  /*  public decryptData(msg: string){
         let decipher = crypto.privateDecrypt(
         {
             key: privateKey,
@@ -106,7 +104,7 @@ class RsaController {
         Buffer.from(msg));
         console.log("Decrypted message: ", decipher.toString("base64"));
         return decipher;
-    }
+    }*/
 }
 
 const controller: RsaController = new RsaController();
