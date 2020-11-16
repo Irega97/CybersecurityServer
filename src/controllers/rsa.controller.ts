@@ -10,9 +10,9 @@ let hexToBigint = bigint_conversion.hexToBigint;
 
 const hex = require('ascii-hex');
 
-/*const { publicKey, privateKey} = crypto.generateKeyPairSync("rsa", {
+const { publicKey, privateKey} = crypto.generateKeyPairSync("rsa", {
 	modulusLength: 2048,
-})*/
+})
 
 // This is the data we want to encrypt
 let mensaje: string;
