@@ -1,7 +1,18 @@
 import {Request, Response } from 'express';
-import * as crypto from 'crypto';
+//import * as crypto from 'crypto';
+let sha = require('object-sha');
+let myRsa = require('my_rsa');
+let rsa = require('../rsa');
+let crypto = new rsa();
 
-const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
+let bigint_conversion = require('bigint-conversion');
+let bigintToHex = bigint_conversion.bigintToHex;
+let hexToBigint = bigint_conversion.hexToBigint;
+
+const hex = require('ascii-hex');
+
+
+const { publicKey, privateKey} = crypto.generateKeyPairSync("rsa", {
 	modulusLength: 2048,
 })
 
@@ -10,12 +21,51 @@ let mensaje: string;
 
 class RsaController {
 
+    rsa = new myRsa();
+
     public async postRSA (req:Request, res:Response){
-        
-    }
-    
-    public async getRSA (req:Request, res:Response){
         try{
+            let msg = req.body.cipherText;//me devuelve el mensaje cifrado?
+            console.log('Petición POST realizada! Mensaje cifrado:', msg);
+
+            mensaje = myRsa.decrypt(msg);
+            console.log("Mensaje descifrado: " + mensaje);
+            res.status(200).json({"text": mensaje});
+        }
+        catch{
+            res.status(500).json({"text": 'Internal Server Error'});
+        }
+    }
+
+    public async getRSA (req:Request, res:Response){
+
+        try{
+            if(mensaje==null) mensaje = "Introduce tu nombre";
+            console.log('Petición GET realizada');
+
+            let msg_Hex = hex('', mensaje); //convierte string a hexadecimal
+            let msg = hexToBigint(msg_Hex); //convierte hexadecimal a bigint
+            let key = this.rsa.publicKey;
+            let e = key.e;
+            let n = key.n;
+            let datacypher = myRsa.encrypt(msg,e,n);
+
+            let data = {
+                dataCypher: bigintToHex(datacypher),
+                e: bigintToHex(e),
+                n: bigintToHex(n)
+            };
+
+            res.status(200).json(data);
+            console.log("GET SERVER: " + data.dataCypher);
+            console.log("GET e SERVER: " + data.e);
+            console.log("GET n SERVER: " + data.n);
+        }
+        catch{
+            res.status(500).json({"text": 'Internal Server Error'});
+        }
+
+        /*try{
             if(mensaje==null) mensaje = "Introduce tu nombre";
             console.log('Petición GET realizada');
             let datacipher = this.encryptData(mensaje, publicKey);
@@ -24,10 +74,10 @@ class RsaController {
         }
         catch{
             res.status(500).json({"text": 'Internal Server Error'});
-        }
+        }*/
     }
 
-    public encryptData(msg: string, pubKey:crypto.KeyLike) {
+   /* public encryptData(msg: string, pubKey:crypto.KeyLike) {
         console.log("ENTRA");
         let cipher = crypto.publicEncrypt(
         {
@@ -41,7 +91,7 @@ class RsaController {
         // so that it's displayed in a more readable form
         console.log("encrypted data: ", cipher.toString("base64"));
         return cipher;
-    }
+    }*/
 
     public decryptData(msg: string){ 
         let decipher = crypto.privateDecrypt(

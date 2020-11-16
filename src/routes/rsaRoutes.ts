@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import rsaController from '../controllers/rsa.controller';
 
+
 const router: Router = Router();
 
 router.get('/msg', rsaController.getRSA);
