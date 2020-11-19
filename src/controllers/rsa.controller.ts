@@ -6,15 +6,14 @@ const bigint_conversion = require('bigint-conversion');
 const bigintToHex = bigint_conversion.bigintToHex;
 const hexToBigint = bigint_conversion.hexToBigint;
 const textToBigint =  bigint_conversion.textToBigint;
+const BigintToText = bigint_conversion.bigintToText;
 
-const hex = require('ascii-hex');
-
-// This is the data we want to encrypt
-let mensaje: string;
+const rsa = new MyRsa();
+let mensaje: string; // This is the data we want to encrypt
 
 class RsaController {
 
-    rsa = new MyRsa();
+    //rsa = new MyRsa();
 
     public async postRSA (req:Request, res:Response){
         try{
@@ -22,9 +21,25 @@ class RsaController {
             let msg = hexToBigint(msgHEX);
             console.log('Petición POST realizada! Mensaje cifrado:', msg);
 
-            mensaje = MyRsa.decrypt(msg);
-            console.log("Mensaje descifrado: " + mensaje);
-            res.status(200).json({"text": mensaje});
+            let key = rsa.privateKey;
+            let d = key.d;
+            let n = key.n;
+
+            mensaje = BigintToText(MyRsa.decrypt(msg, d, n));
+
+            let data = {
+                mensaje: bigintToHex(mensaje),
+                d: bigintToHex(d),
+                n: bigintToHex(n)
+            };
+
+            res.status(200).json(data);
+            console.log("Mensaje descifrado: " + data.mensaje);
+            console.log("Private exponent d: " + data.d);
+            console.log("Public modulus n: " + data.n);
+
+            /*console.log("Mensaje descifrado: " + mensaje);
+            res.status(200).json({"text": mensaje});*/
         }
         catch{
             res.status(500).json({"text": 'Internal Server Error'});
@@ -38,7 +53,7 @@ class RsaController {
             console.log('Petición GET realizada');
 
             let msg = textToBigint(mensaje); //convierte string a bigint
-            let key = this.rsa.publicKey;
+            let key = rsa.publicKey;
             let e = key.e;
             let n = key.n;
             let datacypher = MyRsa.encrypt(msg,e,n);
