@@ -23,7 +23,8 @@ class RsaController {
 
     public async postRSA (req:Request, res:Response){
         try{
-            let msg = req.body.cipherText;//me devuelve el mensaje cifrado?
+            let msgHEX = req.body.cipherText;//me devuelve el mensaje cifrado?
+            let msg = hexToBigint(msgHEX);
             console.log('Petición POST realizada! Mensaje cifrado:', msg);
 
             mensaje = myRsa.decrypt(msg);
