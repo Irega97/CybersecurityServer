@@ -28,11 +28,11 @@ class TextController {
             var iv = CryptoJS.lib.WordArray.random(128/8);
             let datacipher = encrypt(secretKey,iv,mensaje);
             let data = {
-                dataCipher: datacipher,
+                dataCypher: datacipher,
                 iv: iv
             };
             res.status(200).json(data);
-            console.log("GET SERVER: " + data.dataCipher);
+            console.log("GET SERVER: " + data.dataCypher);
             console.log("GET IV SERVER: " + data.iv);
         }
         catch{

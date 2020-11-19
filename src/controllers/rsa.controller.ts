@@ -1,33 +1,28 @@
 import {Request, Response } from 'express';
-//import * as crypto from 'crypto';
-let myRsa = require('my_rsa');
-let rsa = require('../rsa');
-let crypto = new rsa();
+// @ts-ignore
+import MyRsa from 'my-rsa';
 
-let bigint_conversion = require('bigint-conversion');
-let bigintToHex = bigint_conversion.bigintToHex;
-let hexToBigint = bigint_conversion.hexToBigint;
+const bigint_conversion = require('bigint-conversion');
+const bigintToHex = bigint_conversion.bigintToHex;
+const hexToBigint = bigint_conversion.hexToBigint;
+const textToBigint =  bigint_conversion.textToBigint;
 
 const hex = require('ascii-hex');
-
-const { publicKey, privateKey} = crypto.generateKeyPairSync("rsa", {
-	modulusLength: 2048,
-})
 
 // This is the data we want to encrypt
 let mensaje: string;
 
 class RsaController {
 
-    rsa = new myRsa();
+    rsa = new MyRsa();
 
     public async postRSA (req:Request, res:Response){
         try{
-            let msgHEX = req.body.cipherText;//me devuelve el mensaje cifrado?
+            let msgHEX = req.body.cipherText;
             let msg = hexToBigint(msgHEX);
             console.log('Petición POST realizada! Mensaje cifrado:', msg);
 
-            mensaje = myRsa.decrypt(msg);
+            mensaje = MyRsa.decrypt(msg);
             console.log("Mensaje descifrado: " + mensaje);
             res.status(200).json({"text": mensaje});
         }
@@ -42,12 +37,11 @@ class RsaController {
             if(mensaje==null) mensaje = "Introduce tu nombre";
             console.log('Petición GET realizada');
 
-            let msg_Hex = hex('', mensaje); //convierte string a hexadecimal
-            let msg = hexToBigint(msg_Hex); //convierte hexadecimal a bigint
+            let msg = textToBigint(mensaje); //convierte string a bigint
             let key = this.rsa.publicKey;
             let e = key.e;
             let n = key.n;
-            let datacypher = myRsa.encrypt(msg,e,n);
+            let datacypher = MyRsa.encrypt(msg,e,n);
 
             let data = {
                 dataCypher: bigintToHex(datacypher),
