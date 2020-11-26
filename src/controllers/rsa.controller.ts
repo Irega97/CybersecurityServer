@@ -20,6 +20,9 @@ class RsaController {
             let msgHEX = req.body.cipherText;
             let msg = hexToBigint(msgHEX);
             console.log('Petición POST realizada! Mensaje cifrado:', msg);
+            if (!rsa.privateKey){
+                await rsa.generateKeys(1024);
+            }
 
             let key = rsa.privateKey;
             let d = key.d;
