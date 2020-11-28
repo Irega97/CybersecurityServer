@@ -17,9 +17,11 @@ class RsaController {
 
     public async postRSA (req:Request, res:Response){
         try{
-            let msgHEX = req.body.cipherText;
+            console.log("body: ", req.body);
+            let msgHEX = req.body.dataCypher;
+            console.log("HEX MSG: ", msgHEX);
             let msg = hexToBigint(msgHEX);
-            console.log('Petición POST realizada! Mensaje cifrado:', msg);
+            console.log('Petición POST realizada! Mensaje cifrado: ', msg);
             if (!rsa.privateKey){
                 await rsa.generateKeys(1024);
             }
@@ -53,7 +55,7 @@ class RsaController {
 
         try{
             if(mensaje==null) mensaje = "Introduce tu nombre";
-            console.log('Petición GET realizada');
+            console.log('Petición GET realizada', mensaje);
 
             let msg = textToBigint(mensaje); //convierte string a bigint
             let key = rsa.publicKey;
