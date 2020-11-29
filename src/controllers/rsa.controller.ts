@@ -21,7 +21,7 @@ class RsaController {
             let msgHEX = req.body.dataCypher;
             console.log("HEX MSG: ", msgHEX);
             let msg = hexToBigint(msgHEX);
-            console.log('Petición POST realizada! Mensaje cifrado: ', msg);
+            console.log("HEX to BigInt: ", msg);
             if (!rsa.privateKey){
                 await rsa.generateKeys(1024);
             }
@@ -30,7 +30,11 @@ class RsaController {
             let d = key.d;
             let n = key.n;
 
+            console.log("key: ", key, ", d=", d, ", n=", n);
+
             mensaje = BigintToText(MyRsa.decrypt(msg, d, n));
+
+            console.log("mensaje descifrado: ", mensaje);
 
             let data = {
                 mensaje: bigintToHex(mensaje),
@@ -55,13 +59,19 @@ class RsaController {
 
         try{
             if(mensaje==null) mensaje = "Introduce tu nombre";
-            console.log('Petición GET realizada', mensaje);
+            console.log("Mensaje que envia: ", mensaje);
 
             let msg = textToBigint(mensaje); //convierte string a bigint
-            let key = rsa.publicKey;
+            console.log("mensaje en hex: ", msg); //Hasta aqui bien
+            let key = rsa.publicKey;//Falla aqui
             let e = key.e;
             let n = key.n;
+
+            console.log("key: ", key, ", e=", e, ", n=", n);//Aqui va mal, no salta el console log
+
             let datacypher = MyRsa.encrypt(msg,e,n);
+
+            console.log("datacipher: ", datacypher);
 
             let data = {
                 dataCypher: bigintToHex(datacypher),
