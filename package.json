@@ -27,7 +27,7 @@
     "crypto-js": "^4.0.0",
     "express": "^4.17.1",
     "morgan": "^1.10.0",
-    "my-rsa": "file:../RSA",
+    "my-rsa": "file:../RSA_Library",
     "node": "^14.13.1"
   },
   "devDependencies": {
