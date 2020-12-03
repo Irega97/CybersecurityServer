@@ -16,7 +16,17 @@ Libraries:
 ```
 npm i
 npm install -g nodemon
+npm install bigint-conversion
+npm i ../RSA/
 ```
+Build node project:
+
+```
+npm run build
+```
+>CAUTION!: You have to be on .\backend folder in order to run this line 
+
+>(1) Keep it running on a separate cmd while you are working on your project in order to see the changes   
 
 Run node project:
 
