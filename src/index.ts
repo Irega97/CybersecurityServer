@@ -4,15 +4,13 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 
 import Router from './routes/routes';
+import rsaController from './controllers/rsa.controller';
 
 //INITIALIZATIONS
-const serverParams: any = {
-    "port": 3000
-}
-const app:express.Application = express();  //To create an Express application
+const app = express();  //To create an Express application
 
 //CONFIGS
-app.set('port', serverParams.port || process.env.PORT);
+app.set('port', process.env.PORT || 3000);
 app.use(express.json());
 app.use(express.urlencoded({'extended': false}));
 app.use(morgan('dev'));
@@ -25,6 +23,7 @@ app.use('', Router);
 //SERVER STARTUP
 app.listen(app.get('port'), () => {
     console.log(`Listening at port ${app.get('port')}\n`);
+    rsaController.rsaInit();
 });
 
-export default serverParams;
+export default app;

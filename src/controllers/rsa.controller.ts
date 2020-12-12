@@ -1,141 +1,80 @@
 import {Request, Response } from 'express';
-// @ts-ignore
-import MyRsa from 'my-rsa';
+import { PublicKey } from '../rsa/pubKey';
+const bc = require('bigint-conversion');
+import { RSA as classRSA } from "../rsa/rsa";
 
-const bigint_conversion = require('bigint-conversion');
-const bigintToHex = bigint_conversion.bigintToHex;
-const hexToBigint = bigint_conversion.hexToBigint;
-const textToBigint =  bigint_conversion.textToBigint;
-const BigintToText = bigint_conversion.bigintToText;
+let mensaje: string;
+let rsa = new classRSA;
+let pubKeyClient: any;
+let keyPair: any;
 
-const rsa = new MyRsa();
-let mensaje: string; // This is the data we want to encrypt
-
-class RsaController {
-
-    //rsa = new MyRsa();
-
-    public async postRSA (req:Request, res:Response){
-        try{
-            console.log("body: ", req.body);
-            let msgHEX = req.body.dataCypher;
-            console.log("HEX MSG: ", msgHEX);
-            let msg = hexToBigint(msgHEX);
-            console.log("HEX to BigInt: ", msg);
-            if (!rsa.privateKey){
-                await rsa.generateKeys(1024);
-            }
-
-            let key = rsa.privateKey;
-            let d = key.d;
-            let n = key.n;
-
-            console.log("key: ", key, ", d=", d, ", n=", n);
-
-            mensaje = BigintToText(MyRsa.decrypt(msg, d, n));
-
-            console.log("mensaje descifrado: ", mensaje);
-
-            let data = {
-                mensaje: bigintToHex(mensaje),
-                d: bigintToHex(d),
-                n: bigintToHex(n)
-            };
-
-            res.status(200).json(data);
-            console.log("Mensaje descifrado: " + data.mensaje);
-            console.log("Private exponent d: " + data.d);
-            console.log("Public modulus n: " + data.n);
-
-            /*console.log("Mensaje descifrado: " + mensaje);
-            res.status(200).json({"text": mensaje});*/
-        }
-        catch{
-            res.status(500).json({"text": 'Internal Server Error'});
-        }
-    }
-
-    public async getRSA (req:Request, res:Response){
-
-        try{
-            if(mensaje==null) mensaje = "Introduce tu nombre";
-            console.log("Mensaje que envia: ", mensaje);
-
-            let msg = textToBigint(mensaje); //convierte string a bigint
-            console.log("mensaje en hex: ", msg); //Hasta aqui bien
-            let key = rsa.publicKey;//Falla aqui
-
-            if (!rsa.publicKey){
-                await rsa.generateKeys(1024);
-            }
-
-            let e = key.e;
-            let n = key.n;
-
-            console.log("key: ", key, ", e=", e, ", n=", n);//Aqui va mal, no salta el console log
-
-            let datacypher = MyRsa.encrypt(msg,e,n);
-
-            console.log("datacipher: ", datacypher);
-
-            let data = {
-                dataCypher: bigintToHex(datacypher),
-                e: bigintToHex(e),
-                n: bigintToHex(n)
-            };
-
-            res.status(200).json(data);
-            console.log("GET SERVER: " + data.dataCypher);
-            console.log("GET e SERVER: " + data.e);
-            console.log("GET n SERVER: " + data.n);
-        }
-        catch{
-            res.status(500).json({"text": 'Internal Server Error'});
-        }
-
-        /*try{
-            if(mensaje==null) mensaje = "Introduce tu nombre";
-            console.log('Petición GET realizada');
-            let datacipher = this.encryptData(mensaje, publicKey);
-            console.log(datacipher);
-            res.status(200).json(datacipher);
-        }
-        catch{
-            res.status(500).json({"text": 'Internal Server Error'});
-        }*/
-    }
-
-   /* public encryptData(msg: string, pubKey:crypto.KeyLike) {
-        console.log("ENTRA");
-        let cipher = crypto.publicEncrypt(
-        {
-            key: pubKey,
-            padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-            oaepHash: "sha256",
-        },
-        Buffer.from(msg));
-        
-        // The encrypted data is in the form of bytes, so we print it in base64 format
-        // so that it's displayed in a more readable form
-        console.log("encrypted data: ", cipher.toString("base64"));
-        return cipher;
-    }*/
-
-  /*  public decryptData(msg: string){
-        let decipher = crypto.privateDecrypt(
-        {
-            key: privateKey,
-            // In order to decrypt the data, we need to specify the
-            // same hashing function and padding scheme that we used to
-            // encrypt the data in the previous step
-            padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-            oaepHash: "sha256",
-        },
-        Buffer.from(msg));
-        console.log("Decrypted message: ", decipher.toString("base64"));
-        return decipher;
-    }*/
+async function rsaInit(){ //Función que se ejecuta en index.ts
+    // GENERA PAR DE LLAVES RSA (public & private)
+    console.log("Generando claves . . .")
+    keyPair = await rsa.generateRandomKeys();
+    console.log("CLAVE PÚBLICA");
+    console.log("e: ", rsa.publicKey.e);
+    console.log("n: ", rsa.publicKey.n);
+    console.log("ok");
 }
 
-const controller: RsaController = new RsaController();
-export default controller;
+async function getPublicKeyRSA(req: Request, res: Response) {  
+    // Función que envía la clave privada al cliente para cifrar
+    try {
+        res.status(200).send({
+            e: await bc.bigintToHex(rsa.publicKey.e),
+            n: await bc.bigintToHex(rsa.publicKey.n)
+        });
+    }
+    catch(err) {
+        console.log("ERROR AL RECIBIR: " + err);
+        res.status(500).send ({message: "Internal server error"})   
+    }
+}
+
+async function postPubKeyRSA(req: Request, res: Response) {
+    // Función que recoge la clave pública del cliente para cifrar
+    try {
+      let e = req.body.e;
+      let n = req.body.n;
+      e = bc.hexToBigint(e)
+      n =  await bc.hexToBigint(n)
+      pubKeyClient = new PublicKey (e, n);
+      return res.status(200).send({message: "Clave enviada con éxito"})
+    }
+    catch(err) {
+      console.log(err);
+      res.status(500).send ({message: "Internal server error"});
+    }
+  }
+
+async function postRSA (req:Request, res:Response){
+  // Función que descifra mensaje del cliente
+  try{
+      let msg = req.body.dataCypher;
+      console.log('Petición POST realizada! Mensaje cifrado:', msg);
+      let mnsjBigInt = await rsa.privateKey.decrypt(bc.hexToBigint(msg));
+      mensaje = bc.bigintToText(mnsjBigInt);
+      console.log("Mensaje descifrado: " + mensaje);
+      return res.status(200).json({"text": mensaje});
+  } catch (error) {
+      console.log("Error: ", error);
+      return res.status(500).json({message: 'Internal Server Error'});
+  }
+}
+
+async function getRSA (req:Request, res:Response){
+  // Función que envía mensaje cifrado al cliente
+  try {
+    if(mensaje == null) mensaje = "Introduce tu nombre";
+    console.log("Mensaje a cifrar: ", mensaje);
+    let encrypted = await rsa.publicKey.encrypt(mensaje);
+    console.log("Mensaje cifrado: ", encrypted);
+    return res.status(200).json({dataCypher: encrypted});
+  } catch(error) {
+      console.log("Error: ", error);
+      return res.status(500).json({message: "Internal server error"});
+  }
+}
+
+export default {getRSA, postRSA, rsaInit, getPublicKeyRSA, postPubKeyRSA};

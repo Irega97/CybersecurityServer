@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import textController from '../controllers/text.controller';
+import rsaController from '../controllers/rsa.controller';
 
 const router: Router = Router();
 
