@@ -39,9 +39,10 @@ async function postPubKeyRSA(req: Request, res: Response) {
     try {
       let e = req.body.e;
       let n = req.body.n;
-      e = bc.hexToBigint(e)
-      n =  await bc.hexToBigint(n)
+      /* e = bc.hexToBigint(e)
+      n =  await bc.hexToBigint(n) */
       pubKeyClient = new PublicKey (e, n);
+      console.log("pubkey client: ", pubKeyClient);
       return res.status(200).json({message: "Clave enviada con éxito"})
     }
     catch(err) {
@@ -72,6 +73,8 @@ async function getRSA (req:Request, res:Response){
     console.log("Mensaje a cifrar: ", mensaje);
     console.log("pub key: ", pubKeyClient);
     let encrypted = await pubKeyClient.encrypt(mensaje);
+    /* console.log("pub key: ", rsa.publicKey);
+    let encrypted = await rsa.publicKey.encrypt(mensaje); */
     console.log("Mensaje cifrado: ", encrypted);
     return res.status(200).json({dataCypher: encrypted});
   } catch(error) {

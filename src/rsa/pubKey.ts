@@ -1,12 +1,16 @@
+import { hexToBigint } from "bigint-conversion";
+
 export class PublicKey {
-    e: BigInt;
-    n: BigInt;
+    e: any;
+    n: any;
     bcu = require('bigint-crypto-utils');
     //import * as bc from 'bigint-conversion';
     bc = require('bigint-conversion');
     constructor(e: any, n: any) {
-      this.e = BigInt(e);
-      this.n = BigInt(n);
+      /* this.e = BigInt(e);
+      this.n = BigInt(n); */
+      this.e = e;
+      this.n = n;
     }
 
     encrypt (m: any) {
