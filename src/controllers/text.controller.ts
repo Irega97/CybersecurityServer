@@ -14,10 +14,10 @@ class TextController {
             console.log('Petición POST realizada! Mensaje cifrado:', msg);
             mensaje = decrypt(secretKey,iv,msg);
             console.log("Mensaje descifrado: " + mensaje);
-            res.status(200).json({"text": mensaje});
+            return res.status(200).json({"text": mensaje});
         }
         catch{
-            res.status(500).json({"text": 'Internal Server Error'});
+            return res.status(500).json({"text": 'Internal Server Error'});
         }
     }
     

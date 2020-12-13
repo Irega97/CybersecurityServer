@@ -28,7 +28,7 @@
     "crypto-js": "^4.0.0",
     "express": "^4.17.1",
     "morgan": "^1.10.0",
-    "my-rsa": "file:../RSA"
+    "node-rsa": "^1.1.1"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "^0.1100.1",
