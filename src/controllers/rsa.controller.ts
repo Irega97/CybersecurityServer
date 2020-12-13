@@ -21,14 +21,16 @@ async function rsaInit(){ //Función que se ejecuta en index.ts
 async function getPublicKeyRSA(req: Request, res: Response) {  
     // Función que envía la clave privada al cliente para cifrar
     try {
-        res.status(200).send({
-            e: await bc.bigintToHex(rsa.publicKey.e),
-            n: await bc.bigintToHex(rsa.publicKey.n)
-        });
+        let data = {
+          e: await bc.bigintToHex(rsa.publicKey.e),
+          n: await bc.bigintToHex(rsa.publicKey.n)
+        }
+        console.log(data);
+        res.status(200).send(data);
     }
     catch(err) {
         console.log("ERROR AL RECIBIR: " + err);
-        res.status(500).send ({message: "Internal server error"})   
+        res.status(500).json({message: "Internal server error"})   
     }
 }
 
@@ -40,11 +42,11 @@ async function postPubKeyRSA(req: Request, res: Response) {
       e = bc.hexToBigint(e)
       n =  await bc.hexToBigint(n)
       pubKeyClient = new PublicKey (e, n);
-      return res.status(200).send({message: "Clave enviada con éxito"})
+      return res.status(200).json({message: "Clave enviada con éxito"})
     }
     catch(err) {
       console.log(err);
-      res.status(500).send ({message: "Internal server error"});
+      res.status(500).json({message: "Internal server error"});
     }
   }
 
@@ -68,7 +70,8 @@ async function getRSA (req:Request, res:Response){
   try {
     if(mensaje == null) mensaje = "Introduce tu nombre";
     console.log("Mensaje a cifrar: ", mensaje);
-    let encrypted = await rsa.publicKey.encrypt(mensaje);
+    console.log("pub key: ", pubKeyClient);
+    let encrypted = await pubKeyClient.encrypt(mensaje);
     console.log("Mensaje cifrado: ", encrypted);
     return res.status(200).json({dataCypher: encrypted});
   } catch(error) {
