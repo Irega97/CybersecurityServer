@@ -41,7 +41,7 @@ async function postPubKeyRSA(req: Request, res: Response) {
       let n = req.body.n;
       /* e = bc.hexToBigint(e)
       n =  await bc.hexToBigint(n) */
-      pubKeyClient = new PublicKey (e, n);
+      pubKeyClient = new PublicKey (bc.hexToBigint(e), bc.hexToBigint(n));
       console.log("pubkey client: ", pubKeyClient);
       return res.status(200).json({message: "Clave enviada con éxito"})
     }
