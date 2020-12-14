@@ -15,7 +15,7 @@ async function rsaInit(){ //Función que se ejecuta en index.ts
     console.log("CLAVE PÚBLICA");
     console.log("e: ", rsa.publicKey.e);
     console.log("n: ", rsa.publicKey.n);
-    console.log("ok");
+    console.log("Claves generadas con éxito!");
 }
 
 async function getPublicKeyRSA(req: Request, res: Response) {  
@@ -83,4 +83,16 @@ async function getRSA (req:Request, res:Response){
   }
 }
 
-export default {getRSA, postRSA, rsaInit, getPublicKeyRSA, postPubKeyRSA};
+async function blindSignature(req: Request, res: Response){
+  try{
+    let msg = req.body.mensaje;
+    console.log("mensaje: ", msg);
+    let encrypted = await rsa.privateKey.sign(msg);
+    console.log(encrypted);
+    return res.status(200).json({dataSigned: encrypted});
+  } catch (err) {
+    return res.status(500).json(err);
+  }
+}
+
+export default {getRSA, postRSA, rsaInit, getPublicKeyRSA, postPubKeyRSA, blindSignature};

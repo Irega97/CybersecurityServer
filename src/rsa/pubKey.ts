@@ -15,7 +15,6 @@ export class PublicKey {
 
     encrypt (m: any) {
         m = this.bc.textToBigint(m);
-        console.log("n encrypt: ", this.n);
         return this.bc.bigintToHex(this.bcu.modPow(m, this.e, this.n));
     }
 

@@ -17,8 +17,7 @@ export class PrivateKey{
     }
 
     sign (m: any) {
-        //m = this.bc.textToBigint(m);
-        //return this.bc.bigintToText(this.bcu.modPow(m, this.d, this.publicKey.n));
-        return this.bcu.modPow(m, this.d, this.publicKey.n);
+        m = this.bc.textToBigint(m);
+        return this.bc.bigintToHex(this.bcu.modPow(m, this.d, this.publicKey.n));
     }
   }
