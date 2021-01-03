@@ -1,5 +1,3 @@
-import { hexToBigint } from "bigint-conversion";
-
 export class PublicKey {
     e: any;
     n: any;
@@ -7,18 +5,15 @@ export class PublicKey {
     //import * as bc from 'bigint-conversion';
     bc = require('bigint-conversion');
     constructor(e: any, n: any) {
-      /* this.e = BigInt(e);
-      this.n = BigInt(n); */
       this.e = e;
       this.n = n;
     }
 
-    encrypt (m: any) {
-        m = this.bc.textToBigint(m);
-        return this.bc.bigintToHex(this.bcu.modPow(m, this.e, this.n));
+    encrypt (m: bigint) {
+        return this.bcu.modPow(m, this.e, this.n);
     }
 
-    verify (s: any) {
+    verify (s: bigint) {
         return this.bcu.modPow(s, this.e, this.n);
     }
 

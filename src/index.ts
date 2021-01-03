@@ -23,7 +23,7 @@ app.use('', Router);
 //SERVER STARTUP
 app.listen(app.get('port'), () => {
     console.log(`Listening at port ${app.get('port')}\n`);
-    rsaController.rsaInit();
+    rsaController.rsaInit(); // GENERA LAS CLAVES AUTOMÁTICAMENTE AL INICIAR EL SERVIDOR
 });
 
 export default app;
