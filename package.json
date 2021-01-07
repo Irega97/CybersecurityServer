@@ -21,6 +21,7 @@
   "homepage": "https://github.com/Irega97/CybersecurityServer#readme",
   "dependencies": {
     "ascii-hex": "^1.0.1",
+    "axios": "^0.21.1",
     "bigint-conversion": "^2.1.12",
     "bigint-crypto-utils": "^3.0.9",
     "body-parser": "^1.19.0",

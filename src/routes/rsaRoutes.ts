@@ -11,7 +11,7 @@ router.post('/client/pubkey', rsaController.postPubKeyRSA);
 // RSA SERVICE
 router.get('/msg', rsaController.getRSA);
 router.post('/post', rsaController.postRSA);
-router.post('/sign', rsaController.blindSignature);
+router.post('/sign', rsaController.sign);
 
 // NO REPUDIO
 router.post('/nonrep', rsaController.noRepudio);

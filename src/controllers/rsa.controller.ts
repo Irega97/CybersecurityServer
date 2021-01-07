@@ -6,7 +6,8 @@ import { RSA as classRSA } from "../rsa/rsa";
 
 let mensaje: string;
 let rsa = new classRSA;
-let pubKeyClient: any;
+let pubKeyClient: PublicKey;
+let pubKeyTTP: PublicKey;
 let keyPair: any;
 let c: any;
 let po: any;
@@ -15,6 +16,7 @@ let pkp: any;
 let pko: any;
 
 const sha = require('object-sha');
+const axios = require('axios');
 
 async function rsaInit(){ //Función que se ejecuta en index.ts
     // GENERA PAR DE LLAVES RSA (public & private)
@@ -24,6 +26,15 @@ async function rsaInit(){ //Función que se ejecuta en index.ts
     console.log("e: ", rsa.publicKey.e);
     console.log("n: ", rsa.publicKey.n);
     console.log("Claves generadas con éxito!");
+    getPubKeyTTP();
+}
+
+async function getPubKeyTTP(){
+  axios.get('http://localhost:3001/ttp/pubkey').then((res: any) => {
+    let body = res.data;
+    pubKeyTTP = new PublicKey(bc.hexToBigint(body.pubKey.e), bc.hexToBigint(body.pubKey.n));
+    console.log("TTP Public Key: {e: ", pubKeyTTP.e, ", n: ", pubKeyTTP.n, "}");
+  })
 }
 
 // Función que envía la clave privada al cliente para cifrar
@@ -81,10 +92,11 @@ async function getRSA (req:Request, res:Response){
   }
 }
 
-async function blindSignature(req: Request, res: Response){
+async function sign(req: Request, res: Response){
   try{
     let msg = req.body.mensaje;
-    let encrypted = await rsa.privateKey.sign(textToBigint(msg));
+    console.log("MSG: ", msg);
+    let encrypted = await rsa.privateKey.sign(hexToBigint(msg));
     return res.status(200).json({dataSigned: bigintToHex(encrypted)});
   } catch (err) {
     return res.status(500).json(err);
@@ -143,12 +155,11 @@ async function noRepTTP(req: Request, res: Response){
   let pkp, pr, po;
   let data = req.body;
   console.log("data ttp: ", data);
-  let pubKeyTTP = new PublicKey(bc.hexToBigint(data.pubKey.e), bc.hexToBigint(data.pubKey.n));
   //Firma del TTP con el body (mensaje type 4)
   let proofDigest = bc.bigintToHex(await pubKeyTTP.verify(bc.hexToBigint(data.signature)));
   let bodyDigest = await sha.digest(data.body);
   if (bodyDigest === proofDigest) {
-    /* await decrypt(data.body.key, data.body.iv)
+    /* await decrypt(data.body, data.body.iv)
     console.log("Decrypted message: ", c); */
     console.log("TTP confirmed");
   }
@@ -165,11 +176,6 @@ async function decrypt(key:Buffer,iv:Buffer){
   let decrypted = decipher.update(encryptedText);
   decrypted = Buffer.concat([decrypted, decipher.final()]);
   c = decrypted.toString();
-} 
-
-function checkTimestamp(timestamp:number) {
-  const time = Date.now();
-  return (timestamp > (time - 300000) && timestamp < (time + 300000));
 }
 
-export default {getRSA, postRSA, rsaInit, getPublicKeyRSA, postPubKeyRSA, blindSignature, noRepudio, noRepTTP};
+export default {getRSA, postRSA, rsaInit, getPublicKeyRSA, postPubKeyRSA, sign, noRepudio, noRepTTP};
