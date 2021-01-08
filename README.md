@@ -137,3 +137,12 @@ Iván Requena
 Carlos Vázquez
 
 Jordi Salvador
+
+## PROTOCOLO USADO PARA CONVERSIÓN A BIGINT
+En pubKey y privKey:
+- A todas las funciones les llega un bigint como parámetro
+- Cada función devuelve un bigInt
+
+El formato para enviarse mensajes entre cliente y servidor es en hexadecimal
+Entonces, cada vez que recojamos datos de una petición HTTP tenemos que pasar de hex a bigint
+Para recuperar el mensaje original, tenemos que hacer de bigint a texto
