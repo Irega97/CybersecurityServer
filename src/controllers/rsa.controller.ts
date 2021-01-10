@@ -1,11 +1,85 @@
 import { PublicKey } from './../rsa/pubKey';
 import { bigintToHex, hexToBigint, textToBigint } from 'bigint-conversion';
 import {Request, Response } from 'express';
-const bc = require('bigint-conversion');
 import { RSA as classRSA } from "../rsa/rsa";
+import * as socket from 'socket.io-client';
+
+const rsa = new classRSA;
+const bc = require('bigint-conversion');
+const sha = require('object-sha');
+const axios = require('axios');
+const shamirs = require('shamirs-secret-sharing');
+const crypto = require('crypto');
+
+const server  = require('socket.io')(3002, {
+  path: '',
+  serveClient: false,
+  // below are engine.IO options
+  pingInterval: 1000,
+  pingTimeout: 6000,
+  cookie: false,
+  cors: {
+    origin: "http://localhost:4200",
+    credentials: true
+  }
+});
+
+let clientCount = 0;
+let sliceCount = 0;
+
+let clientsSecrets : ArrayBuffer[] = [];
+let totalSecret;
+
+let sockets: any [] = [];
+// Mensajes de Sockets
+
+server.on('connection', async (socket: any) => {
+  clientCount++;
+  sockets.push(socket);
+  console.log("Sockets: ", sockets.length);
+  console.log("Nuevo cliente conectado, total: "+clientCount);
+
+  if(clientCount==5) {
+    let secret:Buffer = crypto.randomBytes(64);
+    console.log("Nuevo secreto generado: ");
+    console.log({secret: bc.bufToHex(secret)});
+    let slices:Array<string> = await sliceSecret(secret);
+    console.log("Secreto troceado: ");
+    console.log({slices:slices});
+    sockets.forEach((s) => {
+      s.emit('secret',{
+          slice:slices.pop()
+      });
+    });
+  }
+
+  socket.emit('connected',"Conexión con socket establecida!");
+
+  socket.on('slice', async (slice: any) => {
+      sliceCount++;
+      console.log("Ha llegado un trozo: ");
+      console.log({slice: slice});
+      console.log("Hay "+sliceCount+" trozos");
+      server.emit('request','Alguien quiere recuperar el secreto');
+      clientsSecrets.push(bc.hexToBuf(slice));
+      if(sliceCount==3) {
+          totalSecret = await shamirs.combine(clientsSecrets);
+          console.log("Ahora podemos recuperar el secreto! Secreto:");
+          console.log({secret: bc.bufToHex(totalSecret)});
+          server.emit('recovered',bc.bufToHex(totalSecret));
+          sliceCount=0;
+      }
+  });
+
+  socket.on('disconnect', (socket: any) => {
+      clientCount--;
+      sockets.splice(sockets.indexOf(socket), 1);
+      console.log("Sockets: ", sockets.length);
+      console.log("Cliente desconectado, total: "+clientCount);
+  });
+});
 
 let mensaje: string;
-let rsa = new classRSA;
 let pubKeyClient: PublicKey;
 let pubKeyTTP: PublicKey;
 let keyPair: any;
@@ -14,9 +88,6 @@ let po: any;
 let pr: any;
 let pkp: any;
 let pko: any;
-
-const sha = require('object-sha');
-const axios = require('axios');
 
 async function rsaInit(){ //Función que se ejecuta en index.ts
     // GENERA PAR DE LLAVES RSA (public & private)
@@ -167,6 +238,14 @@ async function noRepTTP(req: Request, res: Response){
 
 async function digest(obj: any) {
   return await sha.digest(obj,'SHA-256');
+}
+
+async function sliceSecret (secret:Uint8Array): Promise<Array<string>>{
+  console.log('Slicing new secret --> Shares: 5, Threshold: 3');
+  let buffers = shamirs.split(secret, { shares: 5, threshold: 3 });
+  let slices: Array<string> = [];
+  await buffers.forEach((buffer: any) => slices.push(bc.bufToHex(buffer)));
+  return slices;
 }
 
 async function decrypt(key:Buffer,iv:Buffer){
