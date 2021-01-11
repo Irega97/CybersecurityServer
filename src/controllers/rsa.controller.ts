@@ -10,105 +10,39 @@ const sha = require('object-sha');
 const axios = require('axios');
 const shamirs = require('shamirs-secret-sharing');
 const crypto = require('crypto');
-
-const server  = require('socket.io')(3002, {
-  path: '',
-  serveClient: false,
-  // below are engine.IO options
-  pingInterval: 1000,
-  pingTimeout: 6000,
-  cookie: false,
-  cors: {
-    origin: "http://localhost:4200",
-    credentials: true
-  }
-});
-
-let clientCount = 0;
-let sliceCount = 0;
-
-let clientsSecrets : ArrayBuffer[] = [];
-let totalSecret;
-
-let sockets: any [] = [];
-// Mensajes de Sockets
-
-server.on('connection', async (socket: any) => {
-  clientCount++;
-  sockets.push(socket);
-  console.log("Sockets: ", sockets.length);
-  console.log("Nuevo cliente conectado, total: "+clientCount);
-
-  if(clientCount==5) {
-    let secret:Buffer = crypto.randomBytes(64);
-    console.log("Nuevo secreto generado: ");
-    console.log({secret: bc.bufToHex(secret)});
-    let slices:Array<string> = await sliceSecret(secret);
-    console.log("Secreto troceado: ");
-    console.log({slices:slices});
-    sockets.forEach((s) => {
-      s.emit('secret',{
-          slice:slices.pop()
-      });
-    });
-  }
-
-  socket.emit('connected',"Conexión con socket establecida!");
-
-  socket.on('slice', async (slice: any) => {
-      sliceCount++;
-      console.log("Ha llegado un trozo: ");
-      console.log({slice: slice});
-      console.log("Hay "+sliceCount+" trozos");
-      server.emit('request','Alguien quiere recuperar el secreto');
-      clientsSecrets.push(bc.hexToBuf(slice));
-      if(sliceCount==3) {
-          totalSecret = await shamirs.combine(clientsSecrets);
-          console.log("Ahora podemos recuperar el secreto! Secreto:");
-          console.log({secret: bc.bufToHex(totalSecret)});
-          server.emit('recovered',bc.bufToHex(totalSecret));
-          sliceCount=0;
-      }
-  });
-
-  socket.on('disconnect', (socket: any) => {
-      clientCount--;
-      sockets.splice(sockets.indexOf(socket), 1);
-      console.log("Sockets: ", sockets.length);
-      console.log("Cliente desconectado, total: "+clientCount);
-  });
-});
+// HOMOMORFISMO
+const paillier = require("paillier-bigint");
 
 let mensaje: string;
 let pubKeyClient: PublicKey;
 let pubKeyTTP: PublicKey;
 let keyPair: any;
+let keyPairPaillier: any;
 let c: any;
 let po: any;
 let pr: any;
 let pkp: any;
 let pko: any;
 
-async function rsaInit(){ //Función que se ejecuta en index.ts
-    // GENERA PAR DE LLAVES RSA (public & private)
+// Función que se ejecuta al arrancar Backend para obtener las claves necesarias
+async function rsaInit(){ //Se ejecuta en index.ts
     console.log("Generando claves . . .")
+    // GENERA PAR DE LLAVES RSA (public & private)
     keyPair = await rsa.generateRandomKeys();
+    // GENERA PAR DE LLAVES PAILLIER (homomorfismo)
+    keyPairPaillier = await paillier.generateRandomKeys();
     console.log("CLAVE PÚBLICA");
-    console.log("e: ", rsa.publicKey.e);
-    console.log("n: ", rsa.publicKey.n);
+    console.log("n: ", keyPair.publicKey.n);
+    console.log("CLAVE PÚBLICA PAILLIER");
+    console.log("n: ", keyPairPaillier.publicKey.n);
     console.log("Claves generadas con éxito!");
+    // Obtiene clave pública del TTP
     getPubKeyTTP();
 }
 
-async function getPubKeyTTP(){
-  axios.get('http://localhost:3001/ttp/pubkey').then((res: any) => {
-    let body = res.data;
-    pubKeyTTP = new PublicKey(bc.hexToBigint(body.pubKey.e), bc.hexToBigint(body.pubKey.n));
-    console.log("TTP Public Key: {e: ", pubKeyTTP.e, ", n: ", pubKeyTTP.n, "}");
-  })
-}
+// ******************** RSA ***********************
 
-// Función que envía la clave privada al cliente para cifrar
+// Función que envía la clave pública al cliente para cifrar
 async function getPublicKeyRSA(req: Request, res: Response) {  
     try {
         let data = {
@@ -163,6 +97,7 @@ async function getRSA (req:Request, res:Response){
   }
 }
 
+// Función que firma el mensaje que le envía el cliente
 async function sign(req: Request, res: Response){
   try{
     let msg = req.body.mensaje;
@@ -174,6 +109,18 @@ async function sign(req: Request, res: Response){
   }
 }
 
+//************** NO REPUDIO *****************
+
+// Función que obtiene la clave pública del TTP para no repudio
+async function getPubKeyTTP(){
+  axios.get('http://localhost:3001/ttp/pubkey').then((res: any) => {
+    let body = res.data;
+    pubKeyTTP = new PublicKey(bc.hexToBigint(body.pubKey.e), bc.hexToBigint(body.pubKey.n));
+    console.log("TTP Public Key: {e: ", pubKeyTTP.e, ", n: ", pubKeyTTP.n, "}");
+  })
+}
+
+// Función que recoge mensaje del cliente con Proof of Origin (PO)
 async function noRepudio(req: Request, res: Response){
   let json = req.body;
   let body = json.body; //Type, src, dst, ts
@@ -222,6 +169,7 @@ async function noRepudio(req: Request, res: Response){
   }
 }
 
+// Función que recoge el mensaje del TTP con Proof of Key Publication (PKP)
 async function noRepTTP(req: Request, res: Response){
   let pkp, pr, po;
   let data = req.body;
@@ -236,10 +184,89 @@ async function noRepTTP(req: Request, res: Response){
   }
 }
 
+// Función que hashea objeto
 async function digest(obj: any) {
   return await sha.digest(obj,'SHA-256');
 }
 
+//************ SHARED SECRET *****************
+
+// Creamos servidor para sockets
+const server  = require('socket.io')(3002, {
+  path: '',
+  serveClient: false,
+  // below are engine.IO options
+  pingInterval: 1000,
+  pingTimeout: 6000,
+  cookie: false,
+  cors: {
+    origin: "http://localhost:4200",
+    credentials: true
+  }
+});
+
+let clientCount = 0;
+let sliceCount = 0;
+
+let clientsSecrets : ArrayBuffer[] = [];
+let totalSecret;
+
+let sockets: any [] = [];
+
+// Conexión de un socket
+server.on('connection', async (socket: any) => {
+  clientCount++;
+  sockets.push(socket);
+  console.log("Sockets: ", sockets.length);
+  console.log("Nuevo cliente conectado, total: "+clientCount);
+
+  // Confirma la conexión al cliente
+  socket.emit('connected',"Conexión con socket establecida!");
+
+  // Cuando hay 5 clientes conectados, se comparte el secreto
+  if(clientCount==5) {
+    let secret:Buffer = crypto.randomBytes(64);
+    console.log("Nuevo secreto generado: ");
+    console.log({secret: bc.bufToHex(secret)});
+    let slices:Array<string> = await sliceSecret(secret);
+    console.log("Secreto troceado: ");
+    console.log({slices:slices});
+    sockets.forEach((s) => {
+      s.emit('secret',{
+          slice:slices.pop()
+      });
+    });
+  }
+
+  // Recibe un trozo de secreto de uno de los clientes
+  socket.on('slice', async (slice: any) => {
+      sliceCount++;
+      console.log("Ha llegado un trozo: ");
+      console.log({slice: slice});
+      console.log("Hay "+sliceCount+" trozos");
+      server.emit('request','Alguien quiere recuperar el secreto');
+      clientsSecrets.push(bc.hexToBuf(slice));
+      
+      // A la que tenemos 3 trozos, lo podemos recuperar
+      if(sliceCount==3) {
+          totalSecret = await shamirs.combine(clientsSecrets);
+          console.log("Ahora podemos recuperar el secreto! Secreto:");
+          console.log({secret: bc.bufToHex(totalSecret)});
+          server.emit('recovered',bc.bufToHex(totalSecret));
+          sliceCount=0;
+      }
+  });
+
+  // Desconecta un cliente
+  socket.on('disconnect', (socket: any) => {
+      clientCount--;
+      sockets.splice(sockets.indexOf(socket), 1);
+      console.log("Sockets: ", sockets.length);
+      console.log("Cliente desconectado, total: "+clientCount);
+  });
+});
+
+// Función que divide el secreto para compartirlo en trozos
 async function sliceSecret (secret:Uint8Array): Promise<Array<string>>{
   console.log('Slicing new secret --> Shares: 5, Threshold: 3');
   let buffers = shamirs.split(secret, { shares: 5, threshold: 3 });
@@ -248,13 +275,43 @@ async function sliceSecret (secret:Uint8Array): Promise<Array<string>>{
   return slices;
 }
 
-async function decrypt(key:Buffer,iv:Buffer){
-  const crypto = require("crypto");
-  let encryptedText = Buffer.from(c, 'hex');
-  let decipher = crypto.createDecipheriv('aes-256-cbc', bc.hexToBuf(key), bc.hexToBuf(iv));
-  let decrypted = decipher.update(encryptedText);
-  decrypted = Buffer.concat([decrypted, decipher.final()]);
-  c = decrypted.toString();
+
+// ************ HOMOMORFISMO **************
+
+// Función que envía la clave pública de Paillier al cliente para homomorfismo
+async function getPaillierPubKey(req: Request, res: Response){
+  try {
+    keyPairPaillier = await paillier.generateRandomKeys(512);
+    res.status(200).send({
+      n: bc.bigintToHex(keyPairPaillier["publicKey"]["n"]),
+      g: bc.bigintToHex(keyPairPaillier["publicKey"]["g"])
+    })
+  } catch (err) {
+    res.status(500).send({ message: err })
+  }
 }
 
-export default {getRSA, postRSA, rsaInit, getPublicKeyRSA, postPubKeyRSA, sign, noRepudio, noRepTTP};
+// Recoge los votos del cliente
+async function postHomomorfismo (req: Request, res: Response){
+  try {
+      console.log('************************************************');
+      const msg = bc.hexToBigint(req.body.totalEncrypted);
+      console.log("Votos encriptados: " + msg);
+      const decrypt =  await keyPairPaillier["privateKey"].decrypt(msg);
+      const votes = ("0000" + decrypt).slice(-5);
+      console.log("Votos desencriptado: " + votes);
+      var digits = decrypt.toString().split('');
+      console.log("digits: " + digits);
+      console.log("Votos PP: " + digits[0]);
+      console.log("Votos PSOE: " + digits[1]);
+      console.log("Votos PODEMOS: " + digits[2]);
+      console.log("Votos VOX: " + digits[3]);
+      console.log("Votos PACMA: " + digits[4]);
+      console.log('************************************************');
+      res.status(200).send({ msg: bc.bigintToHex(decrypt) })
+  } catch (err) {
+      res.status(500).send({ message: err })
+      }
+};
+
+export default {rsaInit, getPublicKeyRSA, postPubKeyRSA, getRSA, postRSA, sign, noRepudio, noRepTTP, getPaillierPubKey, postHomomorfismo};

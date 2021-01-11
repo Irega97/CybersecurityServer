@@ -18,6 +18,7 @@ router.post('/nonrep', rsaController.noRepudio);
 router.post('/ttp', rsaController.noRepTTP);
 
 // HOMOMORFISMO
-
+router.get('/paillier', rsaController.getPaillierPubKey);
+router.post('/paillier', rsaController.postHomomorfismo);
 
 export default router;
